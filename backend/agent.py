@@ -114,9 +114,9 @@ Reference FAQs (50 total):
             config=config,
         )
     except Exception:
-        # If gemini-2.5-flash is unavailable or deprecated, use gemini-1.5-flash
+        # If gemini-2.5-flash is unavailable or deprecated, use gemini-3.8-flash
         response = await client.aio.models.generate_content(
-            model="gemini-1.5-flash",
+            model="gemini-3.8-flash",
             contents=prompt,
             config=config,
         )
