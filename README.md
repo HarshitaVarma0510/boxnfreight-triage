@@ -76,7 +76,7 @@ boxnfreight-triage/
    ```bash
    uvicorn main:app --reload --port 8000
    ```
-   API runs at `http://https://boxnfreight-triage.onrender.com` (docs available at `/docs`).
+   API runs at `https://boxnfreight-triage.onrender.com` (docs available at `/docs`).
 
 ---
 

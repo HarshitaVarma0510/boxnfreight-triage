@@ -33,7 +33,7 @@ export default function AdminEscalationPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("http://https://boxnfreight-triage.onrender.com/tickets?status=ESCALATED");
+      const res = await fetch("https://boxnfreight-triage.onrender.com/tickets?status=ESCALATED");
       if (!res.ok) {
         throw new Error(`Server returned ${res.status}: ${res.statusText}`);
       }
@@ -44,7 +44,7 @@ export default function AdminEscalationPage() {
       const message =
         err instanceof Error
           ? err.message
-          : "Failed to fetch escalated tickets. Verify backend is running at http://https://boxnfreight-triage.onrender.com.";
+          : "Failed to fetch escalated tickets. Verify backend is running at https://boxnfreight-triage.onrender.com.";
       setError(message);
     } finally {
       setLoading(false);
@@ -55,7 +55,7 @@ export default function AdminEscalationPage() {
     let ignore = false;
     const loadTickets = async () => {
       try {
-        const res = await fetch("http://https://boxnfreight-triage.onrender.com/tickets?status=ESCALATED");
+        const res = await fetch("https://boxnfreight-triage.onrender.com/tickets?status=ESCALATED");
         if (!res.ok) {
           throw new Error(`Server returned ${res.status}: ${res.statusText}`);
         }
@@ -69,7 +69,7 @@ export default function AdminEscalationPage() {
           const message =
             err instanceof Error
               ? err.message
-              : "Failed to fetch escalated tickets. Verify backend is running at http://https://boxnfreight-triage.onrender.com.";
+              : "Failed to fetch escalated tickets. Verify backend is running at https://boxnfreight-triage.onrender.com.";
           setError(message);
         }
       } finally {

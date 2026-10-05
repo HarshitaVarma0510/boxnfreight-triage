@@ -62,7 +62,7 @@ export default function CustomerPortalPage() {
     setResult(null);
 
     try {
-      const res = await fetch("http://https://boxnfreight-triage.onrender.com/tickets", {
+      const res = await fetch("https://boxnfreight-triage.onrender.com/tickets", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
