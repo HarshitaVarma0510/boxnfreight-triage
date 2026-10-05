@@ -140,7 +140,7 @@ def _fallback_heuristic_triage(
     title: str, description: str, faqs: List[Dict[str, Any]]
 ) -> Dict[str, Any]:
     """
-    Fallback deterministic triage engine used when GEMINI_API_KEY is not set.
+    Fallback deterministic triage engine used when GEMINI_API_KEY is not set or quota is exhausted.
     Allows testing, CI verification, and graceful degradation without crashing.
     """
     text = f"{title} {description}".lower()
@@ -188,8 +188,15 @@ def _fallback_heuristic_triage(
     elif category_scores[predicted_category] == 0:
         predicted_category = "Support, Escalation & Account Management"
 
-    # High confidence threshold for auto-resolution
-    if best_faq and best_score >= 0.45 and not is_ambiguous:
+    # Check if this is an exact or very strong FAQ match
+    is_exact_match = best_faq and (
+        best_faq["question"].lower() in text 
+        or text in best_faq["question"].lower() 
+        or best_score >= 0.6
+    )
+
+    # High confidence threshold for auto-resolution (exact FAQ matches bypass is_ambiguous)
+    if best_faq and (is_exact_match or (best_score >= 0.45 and not is_ambiguous)):
         return {
             "status": "RESOLVED",
             "category": best_faq["category"],
