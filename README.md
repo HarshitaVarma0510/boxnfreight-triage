@@ -4,7 +4,7 @@ An AI-powered customer support ticketing and automated triage platform designed 
 
 ---
 
-## 🚀 Features
+## Features
 
 - **Automated AI Triage**: Analyzes customer queries in real-time, categorizing them across 10 standardized logistics categories.
 - **Intelligent Knowledge Base Resolution**: Matches queries against 50+ domain-specific logistics FAQs and automatically resolves them with detailed answers and reasoning.
@@ -15,7 +15,7 @@ An AI-powered customer support ticketing and automated triage platform designed 
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 boxnfreight-triage/
@@ -42,7 +42,7 @@ boxnfreight-triage/
 
 ---
 
-## 🛠️ Quickstart Guide
+## Quickstart Guide
 
 ### 1. Backend Setup
 
