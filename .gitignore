@@ -25,6 +25,14 @@ __pycache__/
 
 # Databases
 *.sqlite3
+*.sqlite
+*.db
+backend/tickets.db
+tickets.db
+
+# Agent / AI local instruction files
+CLAUDE.md
+AGENTS.md
 
 # Logs & debug files
 *.log
