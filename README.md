@@ -97,3 +97,18 @@ boxnfreight-triage/
 4. Access the web applications:
    - **Customer Portal**: [http://localhost:3000](http://localhost:3000)
    - **Admin Escalation Review**: [http://localhost:3000/admin](http://localhost:3000/admin)
+
+## Design Decisions & Escalation Logic
+### 1. Architecture & Model Choice
+- **Framework & Database:** Built using FastAPI for asynchronous request handling and SQLite seeded with all 50 official BRD FAQs categorized across operational workflows.
+- **LLM Provider:** Powered by Google Gemini (gemini-3.8-flash) via the Google GenAI SDK. It performs semantic reasoning across user queries, extracts intent, and maps requests to predefined BRD categories and FAQs.
+### 2. Dual-Layer Resiliency & Fallback Strategy
+- **Quota Exhaustion & Outage Protection:** Free-tier LLM endpoints encounter strict rate/quota thresholds (HTTP 429). To prevent system failures, the architecture includes a deterministic heuristic fallback layer (_fallback_heuristic_triage).
+- **Zero Downtime:** If the Gemini API key is missing or quota is exhausted, incoming tickets automatically route through the fallback engine without crashing or degrading core functionality.
+### 3. Confidence & Escalation Rules
+- **Direct Resolution (RESOLVED):**
+  - When a customer's query matches an existing FAQ with high confidence (semantic match via LLM or >= 60% token/phrase match via heuristic fallback), the system immediately marks the ticket as RESOLVED and serves the official documentation answer.
+  - Valid FAQ inquiries containing words like "escalate" or "agent" (e.g., "How do I escalate an issue?") bypass false-positive filters and resolve directly.
+- **Human Escalation (ESCALATED):**
+  - Tickets are routed to the human review queue if confidence is below threshold, if no relevant FAQ exists, or if clear ambiguity triggers are present (e.g., lost cargo, payment disputes, physical accidents).
+  - The agent provides clear decision reasoning alongside a suggested category, ensuring the support admin dashboard only surfaces actionable, unresolved tickets requiring human inspection.
