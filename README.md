@@ -1,17 +1,58 @@
-# BoxnFreight AI Support Ticket Triage System
+# BoxnFreight AI Support Ticket Triage SaaS
 
-An AI-powered customer support ticketing and automated triage platform designed for freight and logistics operations. The system automatically categorizes incoming inquiries across 10 official BRD categories, resolves known inquiries instantly using an intelligent FAQ knowledge base with Gemini AI, and escalates complex or ambiguous issues to human administrators for review.
+A production-grade, highly resilient AI-powered customer support ticketing and automated triage platform tailored for freight, trucking, and logistics operations. The platform automatically evaluates incoming customer inquiries against 50 official BoxNFreight FAQs across 10 BRD operational categories, delivers instant verified answers, fast-tracks logistics acronyms (POD, LR, tracking), and seamlessly escalates ambiguous issues or disputes to an administrative queue for human review.
 
 ---
 
-## Features
+## Key Features & Production Upgrades
 
-- **Automated AI Triage**: Analyzes customer queries in real-time, categorizing them across 10 standardized logistics categories.
-- **Intelligent Knowledge Base Resolution**: Matches queries against 50+ domain-specific logistics FAQs and automatically resolves them with detailed answers and reasoning.
-- **Human Escalation Queue**: Routes edge cases, high-value disputes, or ambiguous queries to an Admin Escalation Review dashboard.
-- **Modern Full-Stack Architecture**:
-  - **Frontend**: Next.js 15 (App Router), React, Tailwind CSS, Lucide icons.
-  - **Backend**: FastAPI, Google GenAI SDK, SQLite (via `aiosqlite`).
+### 1. Backend & API Resilience (FastAPI + Google GenAI)
+- **Multi-Key Failover Pool (No Hardcoded Conditionals)**:
+  - Dynamically pools API keys from `GEMINI_API_KEYS` (comma-separated) or `GEMINI_API_KEY_PRIMARY`, `GEMINI_API_KEY_SECONDARY`, `GEMINI_API_KEY_TERTIARY`.
+  - Integrates the official Google GenAI SDK using model `"gemini-2.5-flash"` (with adaptive fallback to `"gemini-3.8-flash"`).
+  - Iterates through the pool upon encountering quota limits (`HTTP 429` / `ResourceExhausted`) or transient network errors, logging masked warnings and rolling over seamlessly.
+  - Automatically executes a local deterministic heuristic triage engine if all keys in the pool are exhausted.
+- **Database Deduplication & Idempotency (SQLite + `aiosqlite`)**:
+  - Deterministic SHA-256 hashing across `(category, normalized user query)` with a 5-minute cooldown window.
+  - Returns the existing ticket record and ID with an idempotency notice upon repeated submissions without duplicate database rows.
+  - Full lifecycle tracking with columns: `RESOLVED_BY_AI`, `ESCALATED`, `HUMAN_RESOLVED`, `NEEDS_INFO`, alongside `created_at` and `resolved_at` timestamps.
+- **Intelligent Fast-Track & Greeting Detection**:
+  - **Greeting Detection**: Conversational greetings ("hello", "good morning", "hi") immediately return polite prompts for shipment/LR details without LLM latency (`status: NEEDS_INFO`).
+  - **Logistics Acronym Fast-Track**: Pattern matching for POD (Proof of Delivery), LR (Lorry Receipt), tracking, and E-Way bills directly against the FAQ base to eliminate latency for frequent inquiries.
+  - **Multi-Part Question Parsing**: Enforces structured bulleted answers addressing split multi-part questions strictly from FAQ context.
+  - **Human-Readable Reference Token**: Generates unique ticket references (e.g. `#TKT-1082`) with every response.
+- **Admin Management API**:
+  - `GET /api/admin/metrics`: Real-time KPI counts `{ pending_review, human_resolved, total_tickets, ai_resolved }`.
+  - `GET /api/admin/tickets`: Filter by category, status, and search query across reference ID or query text.
+  - `PATCH /api/admin/tickets/{ticket_id}/resolve`: Instantly updates status to `HUMAN_RESOLVED` and stamps `resolved_at`.
+  - `PATCH /api/tickets/{ticket_id}/escalate`: Enables users to escalate AI-resolved tickets to human staff.
+
+### 2. Frontend & User Experience (Next.js 16 / React 19 / Tailwind CSS)
+- **Simplified Ticket Intake**:
+  - Clean Category dropdown:
+    * *Shipment & Tracking (POD / LR)*
+    * *Booking & Orders*
+    * *Billing & Invoices*
+    * *Account & Login*
+    * *General Inquiry*
+  - Single focused textarea for issue details (open-ended title/subject field removed).
+- **Auto-Scroll & Dynamic Visual Feedback**:
+  - React `useRef` automatically and smoothly scrolls down to the triage verdict card on submission.
+  - Multi-stage animated loading state cycling through status updates ("Analyzing issue...", "Checking knowledge base...", "Formulating triage response...").
+- **User Actions & Human Escalation**:
+  - Prominent Ticket Reference ID display (e.g., `#TKT-1082`) with a one-click copy-to-clipboard action.
+  - Explicit *"Still need help? Talk to an Agent"* escalation button for AI-resolved tickets.
+  - Cooldown deduplication notice banner for idempotent repeated requests.
+
+### 3. Admin Operations Dashboard
+- **Top KPI Summary Cards**:
+  - **Pending Review**: Live count of escalated queue awaiting human inspection.
+  - **Human Resolved**: Count of tickets resolved and closed by staff.
+  - **Total Volume Handled**: Overall ticket volume processed.
+- **Management Table & Instant Actions**:
+  - Category filter dropdown and status tabs (*All*, *Pending Review*, *Human Resolved*, *AI Resolved*).
+  - Search input filtering by `#TKT-<id>` or description text.
+  - Inline *"Mark as Resolved"* button that hits the PATCH endpoint, immediately updating both the row and the top KPI counters.
 
 ---
 
@@ -20,24 +61,26 @@ An AI-powered customer support ticketing and automated triage platform designed 
 ```
 boxnfreight-triage/
 ├── backend/
-│   ├── .env.example        # Example environment configuration
-│   ├── agent.py            # AI triage agent using Gemini API
-│   ├── main.py             # FastAPI backend application
+│   ├── .env.example        # Environment variables & multi-key pool documentation
+│   ├── agent.py            # AI triage agent, failover pool, fast-track, and heuristics
+│   ├── main.py             # FastAPI backend application & admin management endpoints
 │   ├── requirements.txt    # Python backend dependencies
-│   ├── seed_faqs.py        # Database initialization & FAQ seeder
-│   └── tickets.db          # SQLite database (tickets and FAQs)
+│   ├── seed_faqs.py        # Database schema migrations & 50 FAQ seed dataset
+│   └── tickets.db          # SQLite database
 ├── frontend/
 │   ├── public/             # Static public assets
 │   ├── src/
 │   │   ├── app/
-│   │   │   ├── page.tsx    # Customer ticket submission & status UI
-│   │   │   ├── admin/      # Admin escalation dashboard
-│   │   │   └── layout.tsx  # Root Next.js layout
-│   │   └── lib/            # Utilities (date formatting, helpers)
-│   ├── package.json        # Frontend dependencies and scripts
+│   │   │   ├── page.tsx    # Simplified ticket intake & AI triage portal
+│   │   │   ├── admin/      # Upgraded admin KPI & ticket management dashboard
+│   │   │   └── layout.tsx  # Root layout
+│   │   └── lib/
+│   │       ├── api.ts      # Type-safe API client and endpoint helpers
+│   │       └── dateUtils.ts# IST date/time formatting utilities
+│   ├── package.json        # Frontend dependencies & Next.js scripts
 │   └── tsconfig.json       # TypeScript configuration
 ├── .gitignore              # Git ignore rules
-└── README.md               # Project documentation
+└── README.md               # Architecture and setup documentation
 ```
 
 ---
@@ -46,15 +89,14 @@ boxnfreight-triage/
 
 ### 1. Backend Setup
 
-1. Navigate to the backend directory:
+1. Open a terminal and navigate to the backend directory:
    ```bash
    cd backend
    ```
-2. Create and activate a virtual environment:
+2. Activate your virtual environment (if not already active):
    ```bash
-   python -m venv venv
-   # Windows:
-   .\venv\Scripts\activate
+   # Windows PowerShell:
+   .\venv\Scripts\Activate.ps1
    # macOS / Linux:
    source venv/bin/activate
    ```
@@ -62,13 +104,17 @@ boxnfreight-triage/
    ```bash
    pip install -r requirements.txt
    ```
-4. Configure environment variables:
-   Copy `.env.example` to `.env` and add your Gemini API key:
+4. Configure environment variables in `.env`:
    ```bash
-   cp .env.example .env
-   # Edit .env and set GEMINI_API_KEY
+   # Option 1: Comma-separated list
+   GEMINI_API_KEYS=your_primary_key,your_secondary_key
+
+   # Option 2: Individual prioritized keys
+   # GEMINI_API_KEY_PRIMARY=your_primary_key
+   # GEMINI_API_KEY_SECONDARY=your_secondary_key
+   # GEMINI_API_KEY_TERTIARY=your_tertiary_key
    ```
-5. Initialize the database and seed the FAQs:
+5. Initialize the database and apply schema migrations:
    ```bash
    python seed_faqs.py
    ```
@@ -76,7 +122,7 @@ boxnfreight-triage/
    ```bash
    uvicorn main:app --reload --port 8000
    ```
-   API runs at `https://boxnfreight-triage.onrender.com` (docs available at `/docs`).
+   API interactive docs: `http://localhost:8000/docs`.
 
 ---
 
@@ -90,25 +136,23 @@ boxnfreight-triage/
    ```bash
    npm install
    ```
-3. Start the Next.js development server:
+3. Run the Next.js development server:
    ```bash
    npm run dev
    ```
 4. Access the web applications:
    - **Customer Portal**: [http://localhost:3000](http://localhost:3000)
-   - **Admin Escalation Review**: [http://localhost:3000/admin](http://localhost:3000/admin)
+   - **Admin Operations Dashboard**: [http://localhost:3000/admin](http://localhost:3000/admin)
 
-## Design Decisions & Escalation Logic
-### 1. Architecture & Model Choice
-- **Framework & Database:** Built using FastAPI for asynchronous request handling and SQLite seeded with all 50 official BRD FAQs categorized across operational workflows.
-- **LLM Provider:** Powered by Google Gemini (gemini-3.8-flash) via the Google GenAI SDK. It performs semantic reasoning across user queries, extracts intent, and maps requests to predefined BRD categories and FAQs.
-### 2. Dual-Layer Resiliency & Fallback Strategy
-- **Quota Exhaustion & Outage Protection:** Free-tier LLM endpoints encounter strict rate/quota thresholds (HTTP 429). To prevent system failures, the architecture includes a deterministic heuristic fallback layer (_fallback_heuristic_triage).
-- **Zero Downtime:** If the Gemini API key is missing or quota is exhausted, incoming tickets automatically route through the fallback engine without crashing or degrading core functionality.
-### 3. Confidence & Escalation Rules
-- **Direct Resolution (RESOLVED):**
-  - When a customer's query matches an existing FAQ with high confidence (semantic match via LLM or >= 60% token/phrase match via heuristic fallback), the system immediately marks the ticket as RESOLVED and serves the official documentation answer.
-  - Valid FAQ inquiries containing words like "escalate" or "agent" (e.g., "How do I escalate an issue?") bypass false-positive filters and resolve directly.
-- **Human Escalation (ESCALATED):**
-  - Tickets are routed to the human review queue if confidence is below threshold, if no relevant FAQ exists, or if clear ambiguity triggers are present (e.g., lost cargo, payment disputes, physical accidents).
-  - The agent provides clear decision reasoning alongside a suggested category, ensuring the support admin dashboard only surfaces actionable, unresolved tickets requiring human inspection.
+---
+
+## API Reference Summary
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/tickets` | Submit a ticket for AI triage with deduplication & fast-track |
+| `GET` | `/api/tickets` | Query tickets with status, category, and keyword filters |
+| `PATCH` | `/api/tickets/{id}/escalate` | Customer escalation: marks AI-resolved ticket as `ESCALATED` |
+| `GET` | `/api/admin/metrics` | Returns `{ pending_review, human_resolved, total_tickets }` |
+| `GET` | `/api/admin/tickets` | Admin search & filter query table |
+| `PATCH` | `/api/admin/tickets/{id}/resolve`| Admin resolution: marks ticket as `HUMAN_RESOLVED` with timestamp |

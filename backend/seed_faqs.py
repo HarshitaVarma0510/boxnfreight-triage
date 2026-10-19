@@ -540,24 +540,42 @@ def init_db(db_path=DB_PATH):
     )
 
     # Create tickets table if not exists with required schema
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='tickets'")
-    if cursor.fetchone():
-        cursor.execute("SELECT COUNT(*) FROM tickets")
-        if cursor.fetchone()[0] == 0:
-            cursor.execute("DROP TABLE tickets")
-
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS tickets (
-            id INTEGER PRIMARY KEY,
-            title TEXT,
-            description TEXT,
-            status TEXT,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            reference_id TEXT,
             category TEXT,
+            description TEXT,
+            title TEXT,
+            status TEXT,
+            answer TEXT,
             agent_reason TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            query_hash TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            resolved_at TIMESTAMP DEFAULT NULL
         )
         """
+    )
+
+    # Handle schema migration if table previously existed without the new columns
+    cursor.execute("PRAGMA table_info(tickets)")
+    existing_cols = {row[1] for row in cursor.fetchall()}
+    if "reference_id" not in existing_cols:
+        cursor.execute("ALTER TABLE tickets ADD COLUMN reference_id TEXT")
+    if "answer" not in existing_cols:
+        cursor.execute("ALTER TABLE tickets ADD COLUMN answer TEXT")
+    if "query_hash" not in existing_cols:
+        cursor.execute("ALTER TABLE tickets ADD COLUMN query_hash TEXT")
+    if "resolved_at" not in existing_cols:
+        cursor.execute("ALTER TABLE tickets ADD COLUMN resolved_at TIMESTAMP DEFAULT NULL")
+
+    # Create performance indexes
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_tickets_query_hash ON tickets(query_hash, created_at)"
+    )
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status)"
     )
 
     # Insert all 50 BoxNFreight FAQs
@@ -582,3 +600,4 @@ def init_db(db_path=DB_PATH):
 
 if __name__ == "__main__":
     init_db()
+
