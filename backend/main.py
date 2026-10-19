@@ -31,12 +31,16 @@ app = FastAPI(
 # Enable CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  
+    allow_origins=[
+        "https://boxnfreight-triage.vercel.app",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_origin_regex=r"https://boxnfreight-triage.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 class TicketCreate(BaseModel):
     category: Optional[str] = "Other / General Inquiry (Custom query or general help)"
